@@ -13,23 +13,16 @@
 
 #方式一：直接使用
 ```bigquery
-func main()  {
+func main() {
 	client := client.New()
-	var target = []string{"117.23.61.32","184.51.125.2","15.230.221.3"}
-	for _,ip := range target {
-		//检查ip
-		matched,val,itemType,_ := client.Check(net.ParseIP(ip))
-		if matched {
-			fmt.Printf("%v -> %v[%v]\n",ip,itemType,val)
-		}
-	}
+	ip := net.ParseIP("117.23.61.32")
+	_, val, itemType, _ := client.Check(ip)
+	fmt.Printf("%v -> %v[%v]\n", ip, itemType, val)
 }
 ```
 运行上面的代码，如果如下：
 ```bigquery
-117.23.61.32 -> cdn[knownsec]
-184.51.125.2 -> waf[akamai]
-15.230.221.3 -> cloud[aws]
+117.23.61.32 -> cdn[陕西省 西安市,knownsec]
 ```
 
 #方式二：api调用

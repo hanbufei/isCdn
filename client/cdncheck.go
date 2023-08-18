@@ -1,10 +1,15 @@
 package client
 
 import (
+	"context"
+	"fmt"
+	"github.com/gogf/gf/v2/encoding/gcharset"
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"net"
 	"strings"
 	"sync"
 
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/projectdiscovery/retryabledns"
 )
 
@@ -78,18 +83,42 @@ func (c *Client) CheckCloud(ip net.IP) (matched bool, value string, err error) {
 	return matched, value, err
 }
 
+// GetCityByIp 获取ip所属城市
+func (c *Client) GetCityByIp(input net.IP) string {
+	ip := input.String()
+	if ip == "::1" || ip == "127.0.0.1" {
+		return "内网IP"
+	}
+	url := "http://whois.pconline.com.cn/ipJson.jsp?json=true&ip=" + ip
+	bytes := g.Client().GetBytes(context.TODO(), url)
+	src := string(bytes)
+	srcCharset := "GBK"
+	tmp, _ := gcharset.ToUTF8(srcCharset, src)
+	json, err := gjson.DecodeToJson(tmp)
+	if err != nil {
+		return ""
+	}
+	if json.Get("code").Int() == 0 {
+		city := fmt.Sprintf("%s %s", json.Get("pro").String(), json.Get("city").String())
+		return city
+	} else {
+		return ""
+	}
+}
+
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
+	location := c.GetCityByIp(ip)
 	if matched, value, err = c.cdn.Match(ip); err == nil && matched && value != "" {
-		return matched, value, "cdn", nil
+		return matched, location + "," + value, "cdn", nil
 	}
 	if matched, value, err = c.waf.Match(ip); err == nil && matched && value != "" {
-		return matched, value, "waf", nil
+		return matched, location + "," + value, "waf", nil
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
-		return matched, value, "cloud", nil
+		return matched, location + "," + value, "cloud", nil
 	}
-	return false, "", "", err
+	return false, location + "," + value, "", err
 }
 
 // Check Domain with fallback checks if domain belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
