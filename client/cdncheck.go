@@ -16,6 +16,11 @@ import (
 	tx_cdn "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn/v20180606"
 	tx_common "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	tx_profile "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+
+	ali_cdn20180510 "github.com/alibabacloud-go/cdn-20180510/v3/client"
+	ali_openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	ali_util "github.com/alibabacloud-go/tea-utils/v2/service"
+	ali_tea "github.com/alibabacloud-go/tea/tea"
 )
 
 var (
@@ -112,13 +117,13 @@ func (c *Client) GetCityByIp(input net.IP) string {
 }
 
 // 调用腾讯云DescribeCdnIp接口，判断ip是否属于腾讯云
-func (c *Client) CheckTencent(input net.IP) string {
+func (c *Client) CheckTencent(input net.IP) (cdn string, isp string) {
 	ip := input.String()
 	// 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
 	// 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
 	credential := tx_common.NewCredential(
-		config.Config.Tencent.SecretId,
-		config.Config.Tencent.SecretKey,
+		config.Config.Tencent.Id,
+		config.Config.Tencent.Key,
 	)
 	cpf := tx_profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = "cdn.tencentcloudapi.com"
@@ -130,40 +135,76 @@ func (c *Client) CheckTencent(input net.IP) string {
 	response, err := client.DescribeCdnIp(request)
 	//fmt.Print(response.ToJsonString())
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	patternStr := `"Platform":"(.*?)"`
 	Platform, err := gregex.MatchString(patternStr, response.ToJsonString())
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	if Platform[1] == "yes" {
 		patternStr = `"Location":"(.*?)"`
 		result, reerr := gregex.MatchString(patternStr, response.ToJsonString())
 		if reerr != nil {
-			return "腾讯云"
+			return "腾讯云", ""
 		}
-		return "腾讯云 " + result[1]
+		return "腾讯云", result[1]
 	}
-	return ""
+	return "", ""
+}
+
+// 调用阿里云DescribeIpInfo接口，判断ip是否属于阿里云
+func (c *Client) CheckAliyun(input net.IP) (cdn string, isp string) {
+	ip := input.String()
+	config := &ali_openapi.Config{
+		// 必填，您的 AccessKey ID
+		AccessKeyId: ali_tea.String(config.Config.Alibaba.Id),
+		// 必填，您的 AccessKey Secret
+		AccessKeySecret: ali_tea.String(config.Config.Alibaba.Key),
+	}
+	config.Endpoint = ali_tea.String("cdn.aliyuncs.com")
+	client := &ali_cdn20180510.Client{}
+	client, err := ali_cdn20180510.NewClient(config)
+	if err != nil {
+		return "", ""
+	}
+	describeIpInfoRequest := &ali_cdn20180510.DescribeIpInfoRequest{IP: ali_tea.String(ip)}
+	runtime := &ali_util.RuntimeOptions{}
+	response, err := client.DescribeIpInfoWithOptions(describeIpInfoRequest, runtime)
+	if err != nil {
+		return "", ""
+	}
+	//fmt.Printf("%s",response.Body.String())
+	json, err := gjson.DecodeToJson(response.Body.String())
+	if err != nil {
+		return "", ""
+	}
+	if json.Get("CdnIp").String() == "True" {
+		return "阿里云", json.Get("ISP").String()
+	} else {
+		return "阿里云", ""
+	}
 }
 
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
-	location := c.GetCityByIp(ip)
+	location := c.GetCityByIp(ip) + "->"
 	if matched, value, err = c.cdn.Match(ip); err == nil && matched && value != "" {
-		return matched, location + "," + value, "cdn", nil
+		return matched, value + "," + location, "cdn", nil
 	}
 	if matched, value, err = c.waf.Match(ip); err == nil && matched && value != "" {
-		return matched, location + "," + value, "waf", nil
+		return matched, value + "," + location, "waf", nil
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
-		return matched, location + "," + value, "cloud", nil
+		return matched, value + "," + location, "cloud", nil
 	}
-	if value = c.CheckTencent(ip); value != "" {
-		return true, location + "," + value, "cdn", nil
+	if cdn, isp := c.CheckTencent(ip); cdn != "" {
+		return true, cdn + "," + location + isp, "cdn", nil
 	}
-	return false, location + "," + value, "", err
+	if cdn, isp := c.CheckAliyun(ip); cdn != "" {
+		return true, cdn + "," + location + isp, "cdn", nil
+	}
+	return false, value + "," + location, "", err
 }
 
 // Check Domain with fallback checks if domain belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods

@@ -2,7 +2,11 @@ package config
 
 var Config = struct {
 	Tencent struct {
-		SecretId  string `yaml:"secretId"`
-		SecretKey string `yaml:"secretKey"`
+		Id  string `yaml:"secretId"`
+		Key string `yaml:"secretKey"`
 	} `yaml:"Tencent"`
+	Alibaba struct {
+		Id  string `yaml:"accessKeyId"`
+		Key string `yaml:"accessKeySecret"`
+	} `yaml:"Alibaba"`
 }{}
