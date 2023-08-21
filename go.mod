@@ -6,6 +6,8 @@ require (
 	github.com/alibabacloud-go/cdn-20180510/v3 v3.1.0
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.4
 	github.com/alibabacloud-go/tea v1.1.19
+	github.com/alibabacloud-go/tea-utils/v2 v2.0.4
+	github.com/baidubce/bce-sdk-go v0.9.155
 	github.com/gogf/gf/v2 v2.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/projectdiscovery/retryabledns v1.0.29
@@ -23,7 +25,6 @@ require (
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.0 // indirect
 	github.com/alibabacloud-go/tea-utils v1.3.1 // indirect
-	github.com/alibabacloud-go/tea-utils/v2 v2.0.4 // indirect
 	github.com/alibabacloud-go/tea-xml v1.1.2 // indirect
 	github.com/aliyun/credentials-go v1.1.2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect

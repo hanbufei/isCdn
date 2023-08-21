@@ -9,4 +9,8 @@ var Config = struct {
 		Id  string `yaml:"accessKeyId"`
 		Key string `yaml:"accessKeySecret"`
 	} `yaml:"Alibaba"`
+	Baidu struct {
+		Id  string `yaml:"accessKey"`
+		Key string `yaml:"secretKey"`
+	} `yaml:"Baidu"`
 }{}

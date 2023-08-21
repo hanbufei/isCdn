@@ -26,7 +26,7 @@ func main() {
 	//ip := net.ParseIP(input)//"117.23.61.32"
 
 	client := client.New()
-	var ipList = []string{"117.23.61.32", "124.232.162.187", "113.105.168.118"}
+	var ipList = []string{"117.23.61.32", "124.232.162.187", "113.105.168.118", "111.174.1.35"}
 	for _, i := range ipList {
 		ip := net.ParseIP(i)
 		_, val, itemType, _ := client.Check(ip)

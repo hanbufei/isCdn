@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/text/gregex"
 	"github.com/hanbufei/isCdn/config"
+	"io/ioutil"
 	"net"
 	"strings"
 	"sync"
@@ -21,6 +22,8 @@ import (
 	ali_openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	ali_util "github.com/alibabacloud-go/tea-utils/v2/service"
 	ali_tea "github.com/alibabacloud-go/tea/tea"
+
+	bd_bce "github.com/baidubce/bce-sdk-go/bce"
 )
 
 var (
@@ -182,7 +185,43 @@ func (c *Client) CheckAliyun(input net.IP) (cdn string, isp string) {
 	if json.Get("CdnIp").String() == "True" {
 		return "阿里云", json.Get("ISP").String()
 	} else {
-		return "阿里云", ""
+		return "", ""
+	}
+}
+
+// 调用百度云describeIp接口，判断ip是否属于百度云
+func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
+	ip := input.String()
+	req := &bd_bce.BceRequest{}
+	req.SetUri("/v2/utils")
+	req.SetMethod("GET")
+	req.SetParams(map[string]string{"action": "describeIp", "ip": ip})
+	req.SetHeaders(map[string]string{"Accept": "application/json"})
+	payload, _ := bd_bce.NewBodyFromString("")
+	req.SetBody(payload)
+	client, err := bd_bce.NewBceClientWithAkSk(config.Config.Baidu.Id, config.Config.Baidu.Key, "https://cdn.baidubce.com")
+	if err != nil {
+		return "", ""
+	}
+	resp := &bd_bce.BceResponse{}
+	err = client.SendRequest(req, resp)
+	if err != nil {
+		return "", ""
+	}
+	respBody := resp.Body()
+	defer respBody.Close()
+	body, err := ioutil.ReadAll(respBody)
+	if err != nil {
+		return "", ""
+	}
+	json, err := gjson.DecodeToJson(string(body))
+	if err != nil {
+		return "", ""
+	}
+	if json.Get("cdnIP").String() == "true" {
+		return "百度云", json.Get("isp").String()
+	} else {
+		return "", ""
 	}
 }
 
@@ -202,6 +241,9 @@ func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, 
 		return true, cdn + "," + location + isp, "cdn", nil
 	}
 	if cdn, isp := c.CheckAliyun(ip); cdn != "" {
+		return true, cdn + "," + location + isp, "cdn", nil
+	}
+	if cdn, isp := c.CheckBaidu(ip); cdn != "" {
 		return true, cdn + "," + location + isp, "cdn", nil
 	}
 	return false, value + "," + location, "", err

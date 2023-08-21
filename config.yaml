@@ -6,3 +6,7 @@ Alibaba:
   #  密钥可前往官网控制台 https://ram.console.aliyun.com/manage/ak 进行获取
   accessKeyId: LTAIxxx
   accessKeySecret: uWxxx
+Baidu:
+  #  密钥可前往官网控制台 https://console.bce.baidu.com/iam 进行获取
+  accessKey: ALTAxxxx
+  secretKey: 5e8dxxxx

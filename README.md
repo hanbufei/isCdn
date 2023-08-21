@@ -1,5 +1,17 @@
 # isCdn
 [t00ls社区共创] 检查一个ip是否在cdn范围内
+```bigquery
+目前已经完成的cdn检测范围：
+cloudfront：内置字典
+fastly：内置字典
+google：内置字典
+leaseweb：内置字典
+stackpath：内置字典
+知道创宇：内置字典
+腾讯cdn：官方api -> DescribeCdnIp
+阿里cdn：官方api -> DescribeIpInfo
+百度cdn：官方api -> describeIp
+``` 
 
 #内嵌数据源
 ```
