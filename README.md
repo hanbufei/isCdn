@@ -30,6 +30,16 @@ func main() {
 import "github.com/hanbufei/isCdn/client"
 
 func demo(ip string)(string,string){
+    //导入配置文件
+    var ConfigBody, err = ioutil.ReadFile("./config.yaml")
+    if err != nil {
+        log.Fatalln(err.Error())
+    }
+    err = gyaml.DecodeTo(ConfigBody, &config.Config)
+    if err != nil {
+        log.Fatalln(err.Error())
+	}
+
     client := client.New()
     matched,val,itemType,_ := client.Check(net.ParseIP(ip))
     if matched{

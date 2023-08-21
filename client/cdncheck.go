@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"github.com/gogf/gf/v2/encoding/gcharset"
 	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/text/gregex"
+	"github.com/hanbufei/isCdn/config"
 	"net"
 	"strings"
 	"sync"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/projectdiscovery/retryabledns"
+	tx_cdn "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn/v20180606"
+	tx_common "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	tx_profile "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 )
 
 var (
@@ -106,6 +111,43 @@ func (c *Client) GetCityByIp(input net.IP) string {
 	}
 }
 
+// 调用腾讯云DescribeCdnIp接口，判断ip是否属于腾讯云
+func (c *Client) CheckTencent(input net.IP) string {
+	ip := input.String()
+	// 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
+	// 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
+	credential := tx_common.NewCredential(
+		config.Config.Tencent.SecretId,
+		config.Config.Tencent.SecretKey,
+	)
+	cpf := tx_profile.NewClientProfile()
+	cpf.HttpProfile.Endpoint = "cdn.tencentcloudapi.com"
+	// 实例化要请求产品的client对象,clientProfile是可选的
+	client, _ := tx_cdn.NewClient(credential, "", cpf)
+	// 实例化一个请求对象,每个接口都会对应一个request对象
+	request := tx_cdn.NewDescribeCdnIpRequest()
+	request.Ips = tx_common.StringPtrs([]string{ip})
+	response, err := client.DescribeCdnIp(request)
+	//fmt.Print(response.ToJsonString())
+	if err != nil {
+		return ""
+	}
+	patternStr := `"Platform":"(.*?)"`
+	Platform, err := gregex.MatchString(patternStr, response.ToJsonString())
+	if err != nil {
+		return ""
+	}
+	if Platform[1] == "yes" {
+		patternStr = `"Location":"(.*?)"`
+		result, reerr := gregex.MatchString(patternStr, response.ToJsonString())
+		if reerr != nil {
+			return "腾讯云"
+		}
+		return "腾讯云 " + result[1]
+	}
+	return ""
+}
+
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
 	location := c.GetCityByIp(ip)
@@ -117,6 +159,9 @@ func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, 
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
 		return matched, location + "," + value, "cloud", nil
+	}
+	if value = c.CheckTencent(ip); value != "" {
+		return true, location + "," + value, "cdn", nil
 	}
 	return false, location + "," + value, "", err
 }

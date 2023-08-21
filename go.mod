@@ -6,6 +6,8 @@ require (
 	github.com/gogf/gf/v2 v2.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/projectdiscovery/retryabledns v1.0.29
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.0.727
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.727
 	github.com/weppos/publicsuffix-go v0.30.0
 	github.com/yl2chen/cidranger v1.0.2
 )
