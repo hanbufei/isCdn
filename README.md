@@ -32,31 +32,35 @@ func main() {
 	fmt.Printf("%v -> %v[%v]\n", ip, itemType, val)
 }
 ```
-运行上面的代码，如果如下：
+运行上面的代码，结果如下：
 ```bigquery
-117.23.61.32 -> cdn[陕西省 西安市,knownsec]
+117.23.61.32 -> cdn[knownsec,陕西省 西安市]
 ```
 
 #方式二：api调用
 ```bigquery
-import "github.com/hanbufei/isCdn/client"
+在项目里新建cdn目录，并将config.yaml拷贝到改目录下。同时，新建以下go文件，之后调用IsCdn即可。
 
-func demo(ip string)(string,string){
-    //导入配置文件
-    var ConfigBody, err = ioutil.ReadFile("./config.yaml")
-    if err != nil {
-        log.Fatalln(err.Error())
-    }
-    err = gyaml.DecodeTo(ConfigBody, &config.Config)
-    if err != nil {
-        log.Fatalln(err.Error())
+import (
+	_ "embed"
+	"github.com/hanbufei/isCdn/client"
+	"github.com/hanbufei/isCdn/config"
+	"github.com/gogf/gf/v2/encoding/gyaml"
+	"log"
+	"net"
+)
+
+//go:embed config.yaml
+var configStr string
+
+func IsCdn(inputIp string)(val string,itemType string){
+	err := gyaml.DecodeTo([]byte(configStr), &config.Config)
+	if err != nil {
+		log.Fatalln(err.Error())
 	}
-
-    client := client.New()
-    matched,val,itemType,_ := client.Check(net.ParseIP(ip))
-    if matched{
-        return val,itemType
-    }
-    return "",""
+	client := client.New()
+	ip := net.ParseIP(inputIp)
+	_, val, itemType, _ = client.Check(ip)
+	return val,itemType //val是信息，itemType是类型
 }
 ```
