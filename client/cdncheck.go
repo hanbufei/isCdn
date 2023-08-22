@@ -227,26 +227,26 @@ func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
 
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
-	location := c.GetCityByIp(ip) + "->"
+	location := c.GetCityByIp(ip)
 	if matched, value, err = c.cdn.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "," + location, "cdn", nil
+		return matched, value + "->" + location, "cdn", nil
 	}
 	if matched, value, err = c.waf.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "," + location, "waf", nil
+		return matched, value + "->" + location, "waf", nil
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "," + location, "cloud", nil
+		return matched, value + "->" + location, "cloud", nil
 	}
 	if cdn, isp := c.CheckTencent(ip); cdn != "" {
-		return true, cdn + "," + location + isp, "cdn", nil
+		return true, cdn + "->" + location + "->" + isp, "cdn", nil
 	}
 	if cdn, isp := c.CheckAliyun(ip); cdn != "" {
-		return true, cdn + "," + location + isp, "cdn", nil
+		return true, cdn + "->" + location + "->" + isp, "cdn", nil
 	}
 	if cdn, isp := c.CheckBaidu(ip); cdn != "" {
-		return true, cdn + "," + location + isp, "cdn", nil
+		return true, cdn + "->" + location + "->" + isp, "cdn", nil
 	}
-	return false, value + "," + location, "", err
+	return false, location, "", err
 }
 
 // Check Domain with fallback checks if domain belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
