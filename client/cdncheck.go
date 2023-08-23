@@ -227,22 +227,22 @@ func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
 func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
 	location := c.GetCityByIp(ip)
 	if matched, value, err = c.cdn.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "->" + location, "cdn", nil
+		return matched, location, "cdn" + "->" + value, nil
 	}
 	if matched, value, err = c.waf.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "->" + location, "waf", nil
+		return matched, location, "waf" + "->" + value, nil
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
-		return matched, value + "->" + location, "cloud", nil
+		return matched, location, "cloud" + "->" + value, nil
 	}
 	if cdn, isp := c.CheckTencent(ip); cdn != "" {
-		return true, cdn + "->" + location + "->" + isp, "cdn", nil
+		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
 	}
 	if cdn, isp := c.CheckAliyun(ip); cdn != "" {
-		return true, cdn + "->" + location + "->" + isp, "cdn", nil
+		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
 	}
 	if cdn, isp := c.CheckBaidu(ip); cdn != "" {
-		return true, cdn + "->" + location + "->" + isp, "cdn", nil
+		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
 	}
 	return false, location, "", err
 }
