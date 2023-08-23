@@ -111,12 +111,10 @@ func (c *Client) GetCityByIp(input net.IP) string {
 	if err != nil {
 		return ""
 	}
-	if json.Get("code").Int() == 0 {
-		city := fmt.Sprintf("%s %s", json.Get("pro").String(), json.Get("city").String())
-		return city
-	} else {
-		return ""
+	if json.Get("addr").String() != "" {
+		return json.Get("addr").String()
 	}
+	return fmt.Sprintf("%s %s", json.Get("pro").String(), json.Get("city").String())
 }
 
 // 调用腾讯云DescribeCdnIp接口，判断ip是否属于腾讯云
