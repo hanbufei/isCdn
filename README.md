@@ -1,5 +1,5 @@
 # isCdn
-[t00ls社区共创] 检查一个ip是否在cdn范围内
+检查一个ip是否在cdn范围内
 ```bigquery
 目前已经完成的cdn检测范围：
 cloudfront：内置字典
