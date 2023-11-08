@@ -18,7 +18,7 @@ Baidu-加速乐：内置字典
 百度cdn：官方api -> describeIp
 ``` 
 
-#内嵌数据源
+## 内嵌数据源
 ```
 数据在clinet/data目录下，其中sources_data是国外的数据，sources_china是国内数据。
 格式为：
@@ -28,7 +28,7 @@ Baidu-加速乐：内置字典
     }
 ```
 
-#方式一：直接使用
+## 方式一：直接使用
 ```bigquery
 func main() {
 	client := client.New()
@@ -42,7 +42,7 @@ func main() {
 117.23.61.32 -> cdn[knownsec,陕西省 西安市]
 ```
 
-#方式二：api调用
+## 方式二：api调用
 ```bigquery
 在项目里新建cdn目录，并将config.yaml拷贝到改目录下。同时，新建以下go文件，之后调用IsCdn即可。
 
@@ -70,6 +70,6 @@ func IsCdn(inputIp string)(val string,itemType string){
 }
 ```
 
-#感谢
+## 感谢
 
 mabangde
