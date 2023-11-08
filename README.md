@@ -8,6 +8,11 @@ google：内置字典
 leaseweb：内置字典
 stackpath：内置字典
 知道创宇：内置字典
+百度智能云CDN：内置字典
+腾讯云CDN：内置字典
+阿里云CDN：内置字典
+网宿CDN：内置字典
+Baidu-加速乐：内置字典
 腾讯cdn：官方api -> DescribeCdnIp
 阿里cdn：官方api -> DescribeIpInfo
 百度cdn：官方api -> describeIp
@@ -64,3 +69,7 @@ func IsCdn(inputIp string)(val string,itemType string){
 	return val,itemType //val是信息，itemType是类型
 }
 ```
+
+#感谢
+
+mabangde
