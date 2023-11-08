@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gcharset"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/text/gregex"
+	"github.com/hanbufei/isCdn/client/ipdb"
 	"github.com/hanbufei/isCdn/config"
 	"io/ioutil"
 	"net"
@@ -101,6 +102,11 @@ func (c *Client) GetCityByIp(input net.IP) string {
 	ip := input.String()
 	if ip == "::1" || ip == "127.0.0.1" {
 		return "内网IP"
+	}
+	//优先通过内置ip库查询
+	result := ipdb.GetCity(input)
+	if result != "" {
+		return result
 	}
 	url := "http://whois.pconline.com.cn/ipJson.jsp?json=true&ip=" + ip
 	bytes := g.Client().GetBytes(context.TODO(), url)
