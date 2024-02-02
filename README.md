@@ -23,9 +23,9 @@
 
 ## 使用方式：api调用
 
-1. 定义BATconfig，输入腾讯阿里百度3家云的ke。如果不想调用BAT的官方api接口进行检测，此步骤可以省略。
-2. 直接导入github.com/hanbufei/isCdn/client，然后new即可。
-3. 参考代码如下：
+1. 导入github.com/hanbufei/isCdn/cmd
+2. 定义BATconfig，输入腾讯阿里百度3家云的ke。如果不想调用BAT的官方api接口进行检测，相关值设为空即可。
+3. new和check即可。参考代码如下：
 ```bigquery
 import "github.com/hanbufei/isCdn/cmd"
 
