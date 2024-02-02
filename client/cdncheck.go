@@ -2,12 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gogf/gf/v2/encoding/gcharset"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/text/gregex"
 	"github.com/hanbufei/isCdn/client/ipdb"
-	"github.com/hanbufei/isCdn/config"
+	"github.com/hanbufei/isCdn/cmd"
 	"io/ioutil"
 	"net"
 	"strings"
@@ -27,12 +28,6 @@ import (
 	bd_bce "github.com/baidubce/bce-sdk-go/bce"
 )
 
-var (
-	DefaultCDNProviders   string
-	DefaultWafProviders   string
-	DefaultCloudProviders string
-)
-
 // DefaultResolvers trusted (taken from fastdialer)
 var DefaultResolvers = []string{
 	"1.1.1.1:53",
@@ -49,52 +44,22 @@ type Client struct {
 	waf          *providerScraper
 	cloud        *providerScraper
 	retriabledns *retryabledns.Client
+	config       *cmd.BATconfig
 }
 
 // New creates cdncheck client with default options
 // NewWithOpts should be preferred over this function
-func New() *Client {
-	client, _ := NewWithOpts(3, []string{})
-	return client
-}
-
-// NewWithOpts creates cdncheck client with custom options
-func NewWithOpts(MaxRetries int, resolvers []string) (*Client, error) {
-	if MaxRetries <= 0 {
-		MaxRetries = 3
-	}
-	if len(resolvers) == 0 {
-		resolvers = DefaultResolvers
-	}
-	retryabledns, err := retryabledns.New(resolvers, MaxRetries)
-	if err != nil {
-		return nil, err
-	}
+func New(config *cmd.BATconfig) *Client {
+	resolvers := DefaultResolvers
+	r, _ := retryabledns.New(resolvers, 3)
 	client := &Client{
 		cdn:          newProviderScraper(generatedData.CDN),
 		waf:          newProviderScraper(generatedData.WAF),
 		cloud:        newProviderScraper(generatedData.Cloud),
-		retriabledns: retryabledns,
+		retriabledns: r,
+		config:       config,
 	}
-	return client, nil
-}
-
-// CheckCDN checks if an IP is contained in the cdn denylist
-func (c *Client) CheckCDN(ip net.IP) (matched bool, value string, err error) {
-	matched, value, err = c.cdn.Match(ip)
-	return matched, value, err
-}
-
-// CheckWAF checks if an IP is contained in the waf denylist
-func (c *Client) CheckWAF(ip net.IP) (matched bool, value string, err error) {
-	matched, value, err = c.waf.Match(ip)
-	return matched, value, err
-}
-
-// CheckCloud checks if an IP is contained in the cloud denylist
-func (c *Client) CheckCloud(ip net.IP) (matched bool, value string, err error) {
-	matched, value, err = c.cloud.Match(ip)
-	return matched, value, err
+	return client
 }
 
 // GetCityByIp 获取ip所属城市
@@ -125,12 +90,15 @@ func (c *Client) GetCityByIp(input net.IP) string {
 
 // 调用腾讯云DescribeCdnIp接口，判断ip是否属于腾讯云
 func (c *Client) CheckTencent(input net.IP) (cdn string, isp string) {
+	if c.config.TencentId == "" {
+		return "", ""
+	}
 	ip := input.String()
 	// 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
 	// 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
 	credential := tx_common.NewCredential(
-		config.Config.Tencent.Id,
-		config.Config.Tencent.Key,
+		c.config.TencentId,
+		c.config.TencentKey,
 	)
 	cpf := tx_profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = "cdn.tencentcloudapi.com"
@@ -162,12 +130,15 @@ func (c *Client) CheckTencent(input net.IP) (cdn string, isp string) {
 
 // 调用阿里云DescribeIpInfo接口，判断ip是否属于阿里云
 func (c *Client) CheckAliyun(input net.IP) (cdn string, isp string) {
+	if c.config.AlibabaId == "" {
+		return "", ""
+	}
 	ip := input.String()
 	config := &ali_openapi.Config{
 		// 必填，您的 AccessKey ID
-		AccessKeyId: ali_tea.String(config.Config.Alibaba.Id),
+		AccessKeyId: ali_tea.String(c.config.AlibabaId),
 		// 必填，您的 AccessKey Secret
-		AccessKeySecret: ali_tea.String(config.Config.Alibaba.Key),
+		AccessKeySecret: ali_tea.String(c.config.AlibabaKey),
 	}
 	config.Endpoint = ali_tea.String("cdn.aliyuncs.com")
 	client := &ali_cdn20180510.Client{}
@@ -195,6 +166,9 @@ func (c *Client) CheckAliyun(input net.IP) (cdn string, isp string) {
 
 // 调用百度云describeIp接口，判断ip是否属于百度云
 func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
+	if c.config.BaiduId == "" {
+		return "", ""
+	}
 	ip := input.String()
 	req := &bd_bce.BceRequest{}
 	req.SetUri("/v2/utils")
@@ -203,7 +177,7 @@ func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
 	req.SetHeaders(map[string]string{"Accept": "application/json"})
 	payload, _ := bd_bce.NewBodyFromString("")
 	req.SetBody(payload)
-	client, err := bd_bce.NewBceClientWithAkSk(config.Config.Baidu.Id, config.Config.Baidu.Key, "https://cdn.baidubce.com")
+	client, err := bd_bce.NewBceClientWithAkSk(c.config.BaiduId, c.config.BaiduKey, "https://cdn.baidubce.com")
 	if err != nil {
 		return "", ""
 	}
@@ -230,27 +204,33 @@ func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
 }
 
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
-func (c *Client) Check(ip net.IP) (matched bool, value string, itemType string, err error) {
+func (c *Client) Check(inputIp string) (matched bool, value string, itemType string, err error) {
+	ip := net.ParseIP(inputIp)
+	if ip == nil {
+		return false, "[location:]", "[cdn:]", errors.New("输入的ip不正确")
+	}
 	location := c.GetCityByIp(ip)
+	//通过内置字典，检测cdn、waf、cloud
 	if matched, value, err = c.cdn.Match(ip); err == nil && matched && value != "" {
-		return matched, location, "cdn" + "->" + value, nil
+		return matched, fmt.Sprintf("[location:%s]", location), fmt.Sprintf("[cdn:%s]", value), nil
 	}
 	if matched, value, err = c.waf.Match(ip); err == nil && matched && value != "" {
-		return matched, location, "waf" + "->" + value, nil
+		return matched, fmt.Sprintf("[location:%s]", location), fmt.Sprintf("[waf:%s]", value), nil
 	}
 	if matched, value, err = c.cloud.Match(ip); err == nil && matched && value != "" {
-		return matched, location, "cloud" + "->" + value, nil
+		return matched, fmt.Sprintf("[location:%s]", location), fmt.Sprintf("[cloud:%s]", value), nil
 	}
+	//通过bat官方接口，检测cdn
 	if cdn, isp := c.CheckTencent(ip); cdn != "" {
-		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
+		return true, fmt.Sprintf("[location:%s %s]", location, isp), fmt.Sprintf("[cdn:%s]", cdn), nil
 	}
 	if cdn, isp := c.CheckAliyun(ip); cdn != "" {
-		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
+		return true, fmt.Sprintf("[location:%s %s]", location, isp), fmt.Sprintf("[cdn:%s]", cdn), nil
 	}
 	if cdn, isp := c.CheckBaidu(ip); cdn != "" {
-		return true, location + "->" + isp, "cdn" + "->" + cdn, nil
+		return true, fmt.Sprintf("[location:%s %s]", location, isp), fmt.Sprintf("[cdn:%s]", cdn), nil
 	}
-	return false, location, "", err
+	return false, fmt.Sprintf("[location:%s]", location), "[cdn:]", err
 }
 
 // Check Domain with fallback checks if domain belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
@@ -279,11 +259,7 @@ func (c *Client) CheckDomainWithFallback(domain string) (matched bool, value str
 func (c *Client) CheckDNSResponse(dnsResponse *retryabledns.DNSData) (matched bool, value string, itemType string, err error) {
 	if dnsResponse.A != nil {
 		for _, ip := range dnsResponse.A {
-			ipAddr := net.ParseIP(ip)
-			if ipAddr == nil {
-				continue
-			}
-			matched, value, itemType, err := c.Check(ipAddr)
+			matched, value, itemType, err := c.Check(ip)
 			if err != nil {
 				return false, "", "", err
 			}
