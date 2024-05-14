@@ -27,23 +27,32 @@
 2. 定义BATconfig，输入腾讯阿里百度3家云的key。如果不想调用BAT的官方api接口进行检测，相关值设为空即可。
 3. new和check即可。参考代码如下：
 ```bigquery
-import "github.com/hanbufei/isCdn/cmd"
+package main
+
+import (
+	"fmt"
+	"github.com/hanbufei/isCdn/cmd"
+	"github.com/hanbufei/isCdn/config"
+)
 
 func main() {
-    config = &cmd.BATconfig{
-	TencentId:"",
-	TencentKey:"",
-	AlibabaId:"",
-	AlibabaKey:"",
-	BaiduId:"",
-	BaiduKey:"",}
+	config := &config.BATconfig{
+		TencentId:  "",
+		TencentKey: "",
+		AlibabaId:  "",
+		AlibabaKey: "",
+		BaiduId:    "",
+		BaiduKey:   ""}
 
 	client := cmd.New(config)
-	result := client.Check(ip)
-	fmt.Printf(result)
+	var ipList = []string{"117.23.61.32", "124.232.162.187", "113.105.168.118", "111.174.1.35", "36.155.132.3"}
+	for _, ip := range ipList {
+		result := client.Check(ip)
+		fmt.Println(result)
+	}
 }
 ```
-
+![img.png](1.png)
 ## 感谢
 
 mabangde
