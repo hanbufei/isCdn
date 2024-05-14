@@ -15,6 +15,7 @@ type BATconfig struct {
 }
 
 type Result struct {
+	Ip       string
 	IsMatch  bool   //是否匹配到cdn
 	Location string //ip位置
 	Type     string //cdn、waf、cloud
@@ -23,7 +24,7 @@ type Result struct {
 
 func (r Result) String() string {
 	if r.IsMatch {
-		return fmt.Sprintf("匹配ip成功！ location:%s type:%s value:%s", r.Location, r.Type, r.Value)
+		return fmt.Sprintf("匹配ip成功！ip:%s location:%s type:%s value:%s", r.Ip, r.Location, r.Type, r.Value)
 	}
-	return fmt.Sprintf("未找到！ location:%s type:%s value:%s", r.Location, r.Type, r.Value)
+	return fmt.Sprintf("未找到！ ip:%s location:%s type:%s value:%s", r.Ip, r.Location, r.Type, r.Value)
 }

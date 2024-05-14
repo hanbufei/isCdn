@@ -14,7 +14,7 @@ func New(config *config.BATconfig) CdnCheck {
 	return CdnCheck{client: client.New(config)}
 }
 
-func (c *CdnCheck) Check(ip string) string {
+func (c *CdnCheck) Check(ip string) config.Result {
 	result := c.client.Check(ip)
-	return result.String()
+	return result
 }

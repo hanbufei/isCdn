@@ -10,7 +10,6 @@ import (
 	"github.com/hanbufei/isCdn/config"
 	"io/ioutil"
 	"net"
-	"strings"
 	"sync"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -204,6 +203,7 @@ func (c *Client) CheckBaidu(input net.IP) (cdn string, isp string) {
 
 // Check checks if ip belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 func (c *Client) Check(inputIp string) (result config.Result) {
+	result.Ip = inputIp
 	ip := net.ParseIP(inputIp)
 	if ip == nil {
 		result.IsMatch = false
@@ -259,6 +259,7 @@ func (c *Client) Check(inputIp string) (result config.Result) {
 // Check Domain with fallback checks if domain belongs to one of CDN, WAF and Cloud . It is generic method for Checkxxx methods
 // Since input is domain, as a fallback it queries CNAME records and checks if domain is WAF
 func (c *Client) CheckDomainWithFallback(domain string) (result config.Result) {
+	result.Ip = domain
 	dnsData, err := c.retriabledns.Resolve(domain)
 	result.IsMatch = false
 	if err != nil {
@@ -279,6 +280,7 @@ func (c *Client) CheckDNSResponse(dnsResponse *retryabledns.DNSData) (result con
 		for _, ip := range dnsResponse.A {
 			result := c.Check(ip)
 			if result.IsMatch {
+				result.Ip = ip
 				return result
 			}
 		}
@@ -299,12 +301,4 @@ func (c *Client) CheckDNSResponse(dnsResponse *retryabledns.DNSData) (result con
 	}
 	result.IsMatch = false
 	return
-}
-
-func MapKeys(m map[string][]string) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return strings.Join(keys, ", ")
 }
